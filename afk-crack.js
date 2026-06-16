@@ -4,7 +4,7 @@ const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 const bot = mineflayer.createBot({
     host: 'vuamc.net',
     port: 25565,
-    username: 'thanh2k9ok',
+    username: 'acc',
     auth: 'offline'
 })
 
@@ -15,7 +15,7 @@ bot.on('spawn', () => {
     console.log("Bot đã vào server")
 
     setTimeout(() => {
-        bot.chat("/login thanh2009")
+        bot.chat("/login pass")
         console.log("Đã login")
     }, 3000)
 
