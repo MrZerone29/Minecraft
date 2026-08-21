@@ -1,0 +1,10 @@
+wait 40
+send /dn thanh2009
+wait 60
+send /dn thanh2009
+wait 140
+send /menu
+wait 100
+inventory 1 click 24
+wait 200
+send /warp afk
