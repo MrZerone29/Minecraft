@@ -12,17 +12,19 @@ public class Afk : ChatBot
     private const string PASSWORD = "thanh2009";
     private const string MENU_TITLE = "menu";   // tiêu đề inventory cần tìm (không phân biệt hoa thường)
     private const int MENU_SLOT = 24;           // slot cần click
-    private const int WAIT_AFTER_REGISTER = 40; // sau /dk
-    private const int WAIT_AFTER_LOGIN = 50;    // sau /dn
-    private const int MENU_TIMEOUT = 60;        // chờ menu mở sau mỗi lần /menu
-    private const int WAIT_BEFORE_CLICK = 20;  // sau khi thay menu mo, cho roi moi click
+
+    // Mỗi bước chờ ngẫu nhiên trong khoảng MIN_TICKS..MAX_TICKS (20..50 tick = 2s..5s)
+    private const int MIN_TICKS = 20;
+    private const int MAX_TICKS = 50;
+
+    private const int MENU_TIMEOUT = 60;        // chờ menu mở sau mỗi lần /menu (timeout, giữ cố định)
     private const int MENU_MAX_TRY = 3;         // số lần thử /menu
-    private const int WAIT_AFTER_SUB_JOIN = 40; // sau khi vào server con
-    private const int TRANSFER_TIMEOUT = 300;   // 30s: quá hạn mà chưa thấy vào sv con thì vẫn chạy /warp afk
+    private const int TRANSFER_TIMEOUT = 300;   // 30s: quá hạn mà chưa thấy vào sv con thì vẫn chạy /warp afk (timeout, giữ cố định)
     // ==============================================================
 
-    private enum Step { Idle, WaitRegister, WaitLogin, WaitMenu, WaitClick, WaitTransfer, WaitWarp }
+    private enum Step { Idle, WaitJoin, WaitRegister, WaitLogin, WaitMenu, WaitClick, WaitTransfer, WaitWarp }
 
+    private readonly Random rng = new Random();
     private Step step = Step.Idle;
     private int timer = 0;
     private int tries = 0;
@@ -35,6 +37,12 @@ public class Afk : ChatBot
     Dictionary<string, string[]> teams = new();
     Dictionary<string, string> entryTeam = new();
     string current = null;
+
+    // Trả về số tick ngẫu nhiên 2s-5s
+    private int RandTicks()
+    {
+        return rng.Next(MIN_TICKS, MAX_TICKS + 1);
+    }
 
     public override void Initialize()
     {
@@ -63,9 +71,9 @@ public class Afk : ChatBot
             // Vua chuyen sang server con
             if (SHARD)
             {
-                LogToConsole("Da vao server con, cho " + WAIT_AFTER_SUB_JOIN + " tick roi /warp afk");
+                timer = RandTicks();
+                LogToConsole("Da vao server con, cho " + (timer / 10.0) + "s roi /warp afk");
                 step = Step.WaitWarp;
-                timer = WAIT_AFTER_SUB_JOIN;
             }
             else
             {
@@ -75,11 +83,10 @@ public class Afk : ChatBot
             return;
         }
 
-        // Vua vao server login -> chay lai tu dau
-        LogToConsole("Vao server, chay /dk");
-        SendText("/dk " + PASSWORD);
-        step = Step.WaitRegister;
-        timer = WAIT_AFTER_REGISTER;
+        // Vua vao server login -> cho random roi chay /dk
+        timer = RandTicks();
+        LogToConsole("Vao server, cho " + (timer / 10.0) + "s roi /dk");
+        step = Step.WaitJoin;
         tries = 0;
     }
 
@@ -89,11 +96,18 @@ public class Afk : ChatBot
 
         switch (step)
         {
+            case Step.WaitJoin:
+                if (--timer > 0) break;
+                SendText("/dk " + PASSWORD);
+                step = Step.WaitRegister;
+                timer = RandTicks();
+                break;
+
             case Step.WaitRegister:
                 if (--timer > 0) break;
                 SendText("/dn " + PASSWORD);
                 step = Step.WaitLogin;
-                timer = WAIT_AFTER_LOGIN;
+                timer = RandTicks();
                 break;
 
             case Step.WaitLogin:
@@ -106,10 +120,10 @@ public class Afk : ChatBot
                 int menuId;
                 if (TryFindMenu(out menuId))
                 {
-                    LogToConsole("Menu mo (id " + menuId + "), cho " + WAIT_BEFORE_CLICK + " tick roi click");
                     clickMenuId = menuId;
                     step = Step.WaitClick;
-                    timer = WAIT_BEFORE_CLICK;
+                    timer = RandTicks();
+                    LogToConsole("Menu mo (id " + menuId + "), cho " + (timer / 10.0) + "s roi click");
                     break;
                 }
 
